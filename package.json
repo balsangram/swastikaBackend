@@ -1,0 +1,12 @@
+{
+  "name": "swasticbackend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "staart":"node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "sangram",
+  "license": "ISC",
+  "description": ""
+}
