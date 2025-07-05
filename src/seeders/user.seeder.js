@@ -14,8 +14,7 @@ const seedUserData = async () => {
 
     const users = [
       {
-        firstName: 'John',
-        lastName: 'Doe',
+        name: 'John',
         userName: 'johndoe',
         email: 'user1@example.com',
         phoneNo: '8888888888',
@@ -24,8 +23,7 @@ const seedUserData = async () => {
         color: 'green',
       },
       {
-        firstName: 'Jane',
-        lastName: 'Smith',
+        name: 'Jane',
         userName: 'janesmith',
         email: 'user2@example.com',
         phoneNo: '7777777777',

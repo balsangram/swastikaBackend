@@ -3,8 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const userSchema = new mongoose.Schema({
-  firstName: { type: String, required: true, trim: true },
-  lastName: { type: String, required: true, trim: true },
+  name: { type: String, required: true, trim: true },
 
   userName: {
     type: String,
@@ -80,7 +79,7 @@ const userSchema = new mongoose.Schema({
 
 // ✅ Virtual full name
 userSchema.virtual('fullName').get(function () {
-  return `${this.firstName} ${this.lastName}`;
+  return `${this.name}`;
 });
 
 // ✅ Clean user output (hide sensitive data)

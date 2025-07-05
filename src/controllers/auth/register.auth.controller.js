@@ -4,8 +4,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 
 export const registerSchema = Joi.object({
-  firstName: Joi.string().trim().min(2).max(50).required(),
-  lastName: Joi.string().trim().min(2).max(50).required(),
+  name: Joi.string().trim().min(2).max(50).required(),
 
   userName: Joi.string()
     .alphanum()

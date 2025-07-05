@@ -4,8 +4,7 @@ import { ApiError } from "../../utils/ApiError.js";
 
 // Joi schema for allowed fields
 const updateSchema = Joi.object({
-  firstName: Joi.string().trim(),
-  lastName: Joi.string().trim(),
+  name: Joi.string().trim(),
   userName: Joi.string().trim(),
   email: Joi.string().email().trim().lowercase(),
   phoneNo: Joi.string().trim(),
