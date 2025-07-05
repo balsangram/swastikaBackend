@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
@@ -39,7 +40,7 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
   }],
 
-  // Optional: single refresh token (can expand if needed)
+  // ✅ Single refresh token (can be extended for multiple)
   refreshToken: { type: String },
 
   bloodGroup: {
@@ -99,7 +100,6 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 // ✅ Hash password before save
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -109,7 +109,25 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-// ✅ Indexes
+// ✅ Generate Access Token
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
+    { _id: this._id, role: this.role },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: '15m' } // Change duration as needed
+  );
+};
+
+// ✅ Generate Refresh Token
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    { _id: this._id },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: '7d' }
+  );
+};
+
+// ✅ Optional indexes
 // userSchema.index({ email: 1 });
 // userSchema.index({ phoneNo: 1 });
 // userSchema.index({ userName: 1 });
