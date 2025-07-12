@@ -1,48 +1,40 @@
-// Load environment variables
-import dotenv from 'dotenv';
-dotenv.config({ path: './.env' });
+// index.js
 
 import express from 'express';
+import http from 'http';
+import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import connectDB from './src/db/index.js';
 import mainRouter from "./src/routes/index.js";
 import errorHandler from './src/middlewares/errorHandler.js';
+import { setupSocketServer } from './src/socket/server.js'; // ✅ your socket setup function
+
+dotenv.config();
 
 const app = express();
+const server = http.createServer(app); // ✅ Create a raw HTTP server
 
-// Middleware setup
-app.use(morgan('combined'));
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
+// Setup socket.io on the HTTP server
+setupSocketServer(server); // ✅ Correct usage
+
+// Middlewares
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Debug middleware for request body
-app.use((req, res, next) => {
-  console.log('Request Body:', req.body);
-  next();
-});
+app.use(morgan('dev'));
 
 // Routes
 app.use('/swastic', mainRouter);
 
-// Test route
-app.get('/test', (req, res) => {
-  res.json({ message: 'Test endpoint is working!' });
-});
-
-// Error handler middleware
+// Error handling
 app.use(errorHandler);
 
-// Connect to the database and start the server
-connectDB()
-  .then(() => {
-    app.listen(process.env.PORT || 4000, () => {
-      console.log(`Server is running at port: ${process.env.PORT ?? 8000}`);
-    });
-  })
-  .catch((err) => {
-    console.log('MONGO DB connection failed !!!', err);
+// Start server
+const PORT = process.env.PORT || 8000;
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
   });
+});

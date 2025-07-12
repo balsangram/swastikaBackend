@@ -1,69 +1,162 @@
-// Friends
-export const displayFriends = async (req, res) => {
-  // Logic to fetch and display user's friends
+import Message from '../../models/chart/Message.js';
+import Chat from '../../models/chart/chat.model.js';
+import User from '../../models/user.model.js'; // Adjust path to your User model
+
+// Fetch latest messages
+export const getMessages = async (req, res) => {
+  console.log('Received request for /api/swastic/chat/messages', req.query);
+  const limit = parseInt(req.query.limit) || 50;
+  try {
+    if (limit < 1) {
+      return res.status(400).json({ error: 'Invalid limit parameter' });
+    }
+
+    const messages = await Message.find()
+      // .sort({ createdAt: -1 }) // Newest first
+      .limit(limit)
+      .lean();
+    console.log('Fetched messages:', messages.length);
+
+    res.status(200).json({
+      messages,
+      total: messages.length,
+    });
+  } catch (err) {
+    console.error('Failed to fetch messages:', err.message, err.stack);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+};
+
+// Other routes
+const displayFriends = async (req, res) => {
   res.send("📋 Displaying friends list");
 };
 
 export const followFriend = async (req, res) => {
-  // Logic to follow a friend (req.body.friendId)
-  res.send("➕ Followed friend");
-};
+  try {
+    const userId = req.user.id; // Logged-in user's ID
+    const friendId = req.body.friendId; // ID of the friend to follow (from request body)
 
-export const unfollowFriend = async (req, res) => {
-  // Logic to unfollow a friend (req.body.friendId)
+    if (!friendId) {
+      return res.status(400).json({ error: 'Friend ID is required' });
+    }
+
+    if (userId === friendId) {
+      return res.status(400).json({ error: 'Cannot follow yourself' });
+    }
+
+    // Check if the friend exists
+    const friend = await User.findById(friendId);
+    if (!friend) {
+      return res.status(404).json({ error: 'Friend not found' });
+    }
+
+    // Check if a 1-to-1 chat already exists
+    let chat = await Chat.findOne({
+      isGroupChat: false,
+      participants: { $all: [userId, friendId], $size: 2 },
+    });
+
+    // If no chat exists, create a new 1-to-1 chat
+    if (!chat) {
+      chat = await Chat.create({
+        isGroupChat: false,
+        participants: [userId, friendId],
+        lastUpdatedBy: userId,
+      });
+    }
+
+    // Optionally, update User's friend list (if you have a friends array in User model)
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { friends: friendId } }, // Assuming User model has a friends array
+      { new: true }
+    );
+
+    return res.status(200).json({ message: '➕ Followed friend successfully', chatId: chat._id });
+  } catch (error) {
+    console.error('Error following friend:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+const unfollowFriend = async (req, res) => {
   res.send("➖ Unfollowed friend");
 };
-
-// Groups
-export const createGroup = async (req, res) => {
-  // Logic to create group (name, members, etc.)
+const createGroup = async (req, res) => {
   res.send("👥 Group created");
 };
-
-export const deleteGroup = async (req, res) => {
-  // Logic to delete a group (req.body.groupId)
+const deleteGroup = async (req, res) => {
   res.send("🗑️ Group deleted");
 };
-
-export const addGroupMember = async (req, res) => {
-  // Logic to add member to group (groupId, memberId)
+const addGroupMember = async (req, res) => {
   res.send("✅ Member added to group");
 };
-
-export const removeGroupMember = async (req, res) => {
-  // Logic to remove member from group (groupId, memberId)
+const removeGroupMember = async (req, res) => {
   res.send("❌ Member removed from group");
 };
-
-export const changeAdminToUser = async (req, res) => {
-  // Logic to transfer group admin role (groupId, fromAdminId, toUserId)
+const changeAdminToUser = async (req, res) => {
   res.send("🔁 Admin rights transferred");
 };
-
-// Rooms
-export const createRoom = async (req, res) => {
-  // Logic to create a private/public room (name, members, etc.)
+const createRoom = async (req, res) => {
   res.send("📦 Room created");
 };
-
-export const enterRoom = async (req, res) => {
-  // Logic to allow user to enter a room (roomId)
+const enterRoom = async (req, res) => {
   res.send("🚪 Entered room");
 };
 
-// Messages
 export const sendMessage = async (req, res) => {
-  // Logic to send a message (roomId, message content)
-  res.send("✉️ Message sent");
-};
+  try {
+    const userId = req.user.id; // Logged-in user's ID
+    const { chatId, content, messageType, mediaUrl } = req.body; // Input from request body
 
-export const getMessages = async (req, res) => {
-  // Logic to fetch messages for a room (roomId)
-  res.send("📨 Messages fetched");
-};
+    // Validate input
+    if (!chatId || (!content && !mediaUrl)) {
+      return res.status(400).json({ error: 'Chat ID and content or media URL are required' });
+    }
 
-// Global Chat
-export const globalChat = async (req, res) => {
-  // Logic to get messages from global chat
+    // Validate messageType if provided
+    const validMessageTypes = ['text', 'image', 'video', 'audio', 'file'];
+    if (messageType && !validMessageTypes.includes(messageType)) {
+      return res.status(400).json({ error: 'Invalid message type' });
+    }
+
+    // Check if the chat exists and the user is a participant
+    const chat = await Chat.findOne({
+      _id: chatId,
+      participants: userId,
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found or user not a participant' });
+    }
+
+    // Create the message
+    const message = await Message.create({
+      chatId,
+      sender: userId,
+      content: content || '',
+      messageType: messageType || 'text',
+      mediaUrl: mediaUrl || '',
+      isReadBy: [userId], // Sender has read their own message
+      deletedFor: [],
+    });
+
+    // Update the chat's latestMessage and lastUpdatedBy
+    chat.latestMessage = message._id;
+    chat.lastUpdatedBy = userId;
+    await chat.save();
+
+    // Populate sender details for the response
+    const populatedMessage = await Message.findById(message._id)
+      .populate('sender', 'username') // Adjust fields as per your User model
+      .populate('chatId', 'chatName participants');
+
+    return res.status(200).json({ message: '✉️ Message sent successfully', data: populatedMessage });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+const globalChat = async (req, res) => {
   res.send("🌐 Global chat data");
 };

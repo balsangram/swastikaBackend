@@ -2,87 +2,107 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-  userName: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
+    userName: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+    },
+
+    phoneNo: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    // ✅ Friends list (reference to other users)
+    friends: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+
+    // ✅ Support for multiple devices/sessions
+    tokens: [
+      {
+        token: { type: String, required: true },
+        device: { type: String, default: 'Unknown Device' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // ✅ Refresh token (single or can be changed to array)
+    refreshToken: {
+      type: String,
+    },
+
+    bloodGroup: {
+      type: String,
+      enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    },
+
+    xander: {
+      type: String,
+    },
+
+    color: {
+      type: String,
+      enum: ['red', 'green', 'pink', 'none'],
+      default: 'none',
+    },
+
+    role: {
+      type: String,
+      enum: ['admin', 'user'],
+      default: 'user',
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
   },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
 
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
-  },
-
-  phoneNo: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-
-  password: {
-    type: String,
-    required: true,
-  },
-
-  // ✅ Multiple device token support
-  tokens: [{
-    token: { type: String, required: true },
-    device: { type: String, default: 'Unknown Device' },
-    createdAt: { type: Date, default: Date.now },
-  }],
-
-  // ✅ Single refresh token (can be extended for multiple)
-  refreshToken: { type: String },
-
-  bloodGroup: {
-    type: String,
-    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-  },
-
-  xander: { type: String },
-
-  color: {
-    type: String,
-    enum: ['red', 'green', 'pink', 'none'],
-    default: 'none',
-  },
-
-  role: {
-    type: String,
-    enum: ['admin', 'user'],
-    default: 'user',
-  },
-
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-
-  lastSeen: {
-    type: Date,
-    default: null,
-  },
-
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true },
-});
-
-// ✅ Virtual full name
+// ✅ Virtual: full name
 userSchema.virtual('fullName').get(function () {
-  return `${this.name}`;
+  return this.name; // Add surname logic if needed
 });
 
-// ✅ Clean user output (hide sensitive data)
+// ✅ Clean output
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;
@@ -91,12 +111,12 @@ userSchema.methods.toJSON = function () {
   return user;
 };
 
-// ✅ Compare password
+// ✅ Password comparison
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// ✅ Hash password before save
+// ✅ Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {
@@ -108,16 +128,16 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-// ✅ Generate Access Token
+// ✅ Access token
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     { _id: this._id, role: this.role },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' } // Change duration as needed
+    { expiresIn: '15m' }
   );
 };
 
-// ✅ Generate Refresh Token
+// ✅ Refresh token
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     { _id: this._id },
@@ -128,8 +148,8 @@ userSchema.methods.generateRefreshToken = function () {
 
 // ✅ Optional indexes
 // userSchema.index({ email: 1 });
-// userSchema.index({ phoneNo: 1 });
 // userSchema.index({ userName: 1 });
+// userSchema.index({ phoneNo: 1 });
 
 const User = mongoose.model('User', userSchema);
 export default User;
