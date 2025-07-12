@@ -11,6 +11,7 @@ import {
 
 const router = Router();
 
+
 // Send special event notifications (e.g., birthday, anniversary)
 router.post('/special-event', verifyJWT, sendSpecialEventNotification);
 

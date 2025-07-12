@@ -5,6 +5,7 @@ import chatRouter from './allroutes/chatRouter.router.js';
 import notificationRouter from './allroutes/notificationRouter.router.js';
 import timeTableRouter from './allroutes/timeTableRouter.router.js';
 import todoRouter from './allroutes/todoRouter.router.js';
+import noteRouter from './allroutes/noteRouter.router.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/chat', chatRouter);
 router.use('/notification', notificationRouter);
 router.use('/time-table', timeTableRouter);
 router.use('/todo', todoRouter);
+router.use('/note', noteRouter);
 
 export default router;
